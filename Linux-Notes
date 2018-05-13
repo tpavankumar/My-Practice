@@ -1,0 +1,338 @@
+*****************Debugging****************
+Debugging on the entire script		bash -x script.sh
+
+Debugging on part(s) of the script
+		Using the set Bash built-in you can run in normal mode those portions of the script of which you are sure they are without fault, and display debugging information only for troublesome zones. Say we are not sure what the w command will do in the example commented-script.sh, then we could enclose it in the script like this:
+				set -x			# activate debugging from here
+				w
+				set +x			# stop debugging from here
+				    set -x : Display commands and their arguments as they are executed.
+    				set -v : Display shell input lines as they are read.
+Once you found the buggy part of your script, you can add echo statements before each command of which you are unsure, so that you will see exactly where and why things don't work. In the example commented-script1.sh script, it could be done like this, still assuming that the displaying of users gives us problems:
+
+echo "debug message: now attempting to start w command"; w
+
+In more advanced scripts, the echo can be inserted to display the content of variables at different stages in the script, so that flaws can be detected:
+
+echo "Variable VARNAME is now set to $VARNAME."
+
+Use of intelligent DEBUG function
+
+First, add a special variable called _DEBUG. Set _DEBUG to ‘on’ when you need to debug a script:
+_DEBUG="on"
+
+Put the following function at the beginning of the script:
+
+function DEBUG()
+{
+ [ "$_DEBUG" == "on" ] &&  $@
+}
+
+Now wherever you need debugging simply use the DEBUG function as follows:
+DEBUG echo "File is $filename"
+
+OR
+DEBUG set -x
+Cmd1
+Cmd2
+DEBUG set +x
+
+When done with debugging (and before moving your script to production) set _DEBUG to ‘off’. No need to delete debug lines.
+_DEBUG="off" # set to anything but not to 'on'
+
+********Importance of Quoting in Strings*********
+There are two types of quoting:
+	Weak: uses double quotes: "
+	Strong: uses single quotes: '
+If you want to bash to expand your argument, you can use Weak Quoting:
+	world="World"
+	echo "Hello $world"
+		#> Hello World
+If you don't want to bash to expand your argument, you can use Strong Quoting:
+	world="World"
+	echo 'Hello $world'
+		#> Hello $world
+You can also use escape to prevent expansion:
+	world="World"
+	echo "Hello \$world"
+		#> Hello $world
+*********************************Handling Named Arguments*************************************
+https://www.ibm.com/developerworks/library/l-bash-parameters/index.html
+Passed parameters
+
+Part of the beauty of functions and shell scripts is the ability to make a single function or script behave differently by passing parameters to it. In this section you will learn how to identify and use the parameters that are passed.
+Inside a function or script, you can refer to the parameters using the bash special variables.You prefix these with a $ symbol to reference them as with other shell variables.
+Parameter				Purpose
+=========				=======
+0, 1, 2, ...			positional parameters starting from parameter 0. Parameter 0 refers to the name of the 								program that started bash, or the name of the shell script if the function is running within a 						   shell script.
+*	--------			positional parameters starting from parameter 1. If the expansion is done within double								 quotes, then the expansion is a single word with the first character of the IFS special 							variable separating the parameters, or no intervening space if IFS is null. 
+@	--------			 positional parameters starting from parameter 1. If the expansion is done within double							 quotes, then each parameter becomes a single word, so that "$@" is equivalent to "$1" "$2"						If your parameters arguments likely to contain embedded blanks, you will want to use this form. 
+#	--------			The number of parameters, not including parameter 0.
+Note: If you have more than 9 parameters, you cannot use $10 to refer to the tenth one. You must first either process or save the first parameter ($1), then use the shift command to drop parameter 1 and move all remaining parameters down 1, so that $10 becomes $9 and so on. The value of $# will be updated to reflect the remaining number of parameters.
+
+
+
+
+
+
+
+
+
+
+
+
+*************************Script shebang************************
+Env shebang
+	To execute a script file with the bash executable found in the PATH environment variable by using the executable
+	env, the first line of a script file must indicate the absolute path to the env executable with the argument bash:
+		#!/usr/bin/env bash
+	The env path in the shebang is resolved and used only if a script is directly launch like this:
+		script.sh
+	The script must have execution permission.
+	The shebang is ignored when a bash interpreter is explicitly indicated to execute a script:
+		bash script.sh
+Direct shebang
+	To execute a script file with the bash interpreter, the first line of a script file must indicate the absolute path to the
+	bash executable to use:
+		#!/bin/bash
+	The bash path in the shebang is resolved and used only if a script is directly launch like this:
+		./script.sh
+Other shebangs
+	There are two kinds of programs the kernel knows of. A binary program is identified by it's ELF
+	(ExtenableLoadableFormat) header, which is usually produced by a compiler. The second one are scripts of any
+	kind.	
+	If a file starts in the very first line with the sequence #! then the next string has to be a pathname of an interpreter.
+	If the kernel reads this line, it calls the interpreter named by this pathname and gives all of the following words in
+	this line as arguments to the interpreter. If there is no file named "something" or "wrong":
+		#!/bin/bash something wrong
+		echo "This line never gets printed"
+	bash tries to execute its argument "something wrong" which doesn't exist. The name of the script file is added too.
+	To see this clearly use an echo shebang:	
+		#"/bin/echo something wrong
+		# and now call this script named "thisscript" like so:
+		# thisscript one two
+		# the output will be:
+something wrong ./thisscript one two
+Some programs like awk use this technique to run longer scripts residing in a disk file.
+************************Navigating directories************************
+Absolute vs relative directories
+	absolutely PATH, starting with a slash /, thus:							cd /home/username/project/abc
+	relative PATH. For example, if you arE 									cd abc
+		already in /home/username/project, you can enter the subdirectory abc thus:
+	Parent directory 														cd ..
+	Change to the last directory											cd -
+	Change to the home directory											cd/cd $HOME/cd ~
+	Change to the Directory of the Script
+		In general, there are two types of Bash scripts:
+			1. System tools which operate from the current working directory
+			2. Project tools which modify files relative to their own place in the files system
+For the second type of scripts, it is useful to change to the directory where the script is stored. This can be done with the following command:
+																			cd "$(dirname "$(readlink -f "$0")")"
+		This command runs 3 commands:
+			1. readlink -f "$0" determines the path to the current script ($0)
+			2. dirname converts the path to script to the path to its directory
+			3. cd changes the current work directory to the directory it receives from dirname
+readlink	-------		To find the original path of the symlink
+		-f  -------		Recursively finds
+*************************Listing Files*********************
+Column No. Example Description
+1.1 		d 		File type (see table below)
+1.2 	rwxr-xr-x 	Permission string
+2 			3 		Number of hard links
+3 		   root 	Owner name
+4 		   root 	Owner group
+5 		   4096 	File size in bytes
+6 	   Apr 21 03:44 Modification time
+7 		   hello 	File name
+
+File Type
+---------
+Character 		File Type
+	- 		Regular file
+	b 		Block special file
+	c 		Character special file
+	C 		High performance ("contiguous data") file
+	d 		Directory
+	D 		Door (special IPC file in Solaris 2.5+ only)
+	l 		Symbolic link
+	M 		Off-line ("migrated") file (Cray DMF)
+	n 		Network special file (HP-UX)
+	p 		FIFO (named pipe)
+	P 		Port (special system file in Solaris 10+ only)
+	s 		Socket
+	? 		Some other file type
+List the Ten Most Recently Modified files 				ls -lt | head 				sorted by time (-t)
+List All Files Including Dotfiles 						ls -a
+														ls -A 				-A or --almost-all option will list all files, including dotfiles, but does not list implied . and ..
+List Files Without Using `ls`							printf "%s\n" *     display the files and directories that 																				are in the current directory
+														printf "%s\n" */	display only the directories in the 							current directory
+														printf "%s\n" *.{gif,jpg,png} display only image files
+List Files in a Tree-Like Format 						tree /tmp
+List Files Sorted by size 								ls -l -S ./Fruits
+sort order is reversed									ls -l -S -r /Fruits
+*************************Using cat************************
+primary purpose of cat 									cat file1 file2 file3 > file_all	
+concatenate files as part of a pipeline, 				cat file1 file2 file3 | grep foo
+Printing the Contents of a File 						cat file.txt
+If the file contains non-ASCII characters, 				cat -v unicode.txt
+	you can display those characters symbolically with						
+for interactive use, you are better off using an 		less file.txt 
+		interactive pager like less or more, 			more file.txt
+To pass the contents of a file as input to a command 	tr A-Z a-z <file.txt 		# as an alternative to cat 																									file.txt | tr A-Z a-z
+In case the content needs to be listed backwards from its end 	tac file.txt
+If you want to print the contents with line numbers		cat -n file.txt
+***********************Write to a file*********************
+let you write the text on terminal which will be saved in a file named file 	cat >file
+will append the text to the end of the file 									cat >>file
+Linux cat command (as end marker)
+	The 'cat << EOF ' option displays end marker at the end of a file. This is called here directive and file content will be saved at the given end marker.
+	File can be also saved with the help of 'ctrl + d ' keys. It works same as end marker.
+		Note: Any word other than 'EOF' can be used for the end marker.	
+			Syntax:
+			    cat << EOF  
+			Example:
+			    cat > exm.txt << EOF
+Read from standard input								cat < file.txt  Output is same as cat file.txt, but it 																				reads the contents of the file from 																				standard input instead of directly from
+																		the file.
+Display line numbers with Output 						cat --number file  --number/-n flag to print line numbers 																						before each line
+														cat -b file 	skip empty lines when counting lines, use 					the --number-nonblank, or simply -b.
+Files compressed by gzip can be directly concatenated	cat file1.gz file2.gz file3.gz > combined.gz
+into larger gzipped files
+gzip that is less efficient than concatenating the 		cat file1 file2 file3 | gzip > combined.gz
+input files and gzipping the result
+														gunzip combined.gz
+***********************GREP************************
+To find the word foo in the file bar :					grep foo ~/Desktop/bar
+							Recurssive					grep -r foo ~/Desktop/bar
+To find all lines that do not contain foo in the file bar :		grep -L "foo" *
+find all words containing foo in the end (WIldcard Expansion):	grep "*foo" ~/Desktop/bar
+********************Aliasing***********************
+Sometimes you may want to bypass an alias temporarily, without disabling it.
+				alias ls='ls --color=auto'
+And let's say you want to use the ls command without disabling the alias. You have several options:
+		Use the command builtin: command ls
+		Use the full path of the command: /bin/ls
+		Add a \ anywhere in the command name, for example: \ls, or l\s
+		Quote the command: "ls" or 'ls'
+Create an Alias:*****
+				alias word='command'				Invoking word will run command.
+				List all Aliases 		 			alias -p
+Remove an alias:*****
+				unalias alias_name
+
+************BASH_ALIASES is an internal bash assoc array*********
+Aliases are named shortcuts of commands, one can define and use in interactive bash instances. They are held in
+an associative array named BASH_ALIASES. To use this var in a script, it must be run within an interactive shell
+			#!/bin/bash -li
+			echo There are ${#BASH_ALIASES[*]} aliases defined.
+			for ali in "${!BASH_ALIASES[@]}"; do
+			printf "alias: %-10s triggers: %s\n" "$ali" "${BASH_ALIASES[$ali]}"
+*************************Jobs and Processes*******************
+Creating jobs: just append a single & after the command 						$ sleep 10 &
+You can also make a running process a job by pressing Ctrl + z :
+				$ sleep 10
+				^Z
+				[1]+ Stopped sleep 10
+To bring the Process to the foreground, the command fg is used together with %:			$ fg %1
+																							sleep 10
+Now you can interact with the process. To bring it back to the background you can use the bg command. Due to the
+occupied terminal session, you need to stop the process first by pressing Ctrl + z .
+				$ sleep 10
+				^Z
+				[1]+ Stopped sleep 10
+				$ bg %1
+				[1]+ sleep 10 &			
+Killing running jobs
+				$ sleep 10 &
+				[1] 20024
+				$ kill %1
+				[1]+ Terminated sleep 10																	
+default kill signal sent by kill is SIGTERM, which allows the target process to exit gracefully
+To see a full list, run kill -l.
+Signal name Signal value	 Effect
+SIGHUP 			1 				Hangup
+SIGINT 			2 		Interrupt from keyboard
+SIGKILL 		9			 Kill signal
+SIGTERM 		15		 Termination signal
+#####Start and kill specific processes
+Probably the easiest way of killing a running process is by selecting it through the process name as in the following
+example using pkill command as
+		pkill -f test.py
+(or) a more fool-proof way using pgrep to search for the actual process-id
+		kill $(pgrep -f 'python test.py')
+The same result can be obtained using grep over ps -ef | grep name_of_process then killing the process
+associated with the resulting pid.
+Start the script that will eventually killed with the following approach. Let's assume that the command you want to
+execute and eventually kill is python test.py.
+		#!/bin/bash
+		if [[ ! -e /tmp/test.py.pid ]]; then # Check if the file already exists
+			python test.py & #+and if so do not run another process.
+			echo $! > /tmp/test.py.pid
+		else
+			echo -n "ERROR: The process is already running with pid "
+			cat /tmp/test.py.pid
+			echo
+		fi
+This will create a file in the /tmp directory containing the pid of the python test.py process. If the file already
+exists, we assume that the command is already running and the script return an error.Then, when you want to kill it use the following script:
+		#!/bin/bash
+		if [[ -e /tmp/test.py.pid ]]; then # If the file do not exists, then the
+			kill `cat /tmp/test.py.pid` #+the process is not running. Useless
+			rm /tmp/test.py.pid #+trying to kill it.
+		else
+			echo "test.py is not running"
+		fi
+To check which process running on port 8080
+		lsof -i :8080
+#####Disowning background job
+	$ gzip extremelylargefile.txt &
+	$ bg
+	$ disown %1
+This allows a long running process to continue once your shell (terminal, ssh, etc) is closed.
+#####List Current Jobs
+$ tail -f /var/log/syslog > log.txt
+	[1]+ Stopped tail -f /var/log/syslog > log.txt
+$ sleep 10 &
+$ jobs
+	[1]+ Stopped tail -f /var/log/syslog > log.txt
+	[2]- Running sleep 10 &
+*******************************************************
+dpkg –get-selections 			gives the list of all package names and their current state like installed, 										deinstalled etc.
+dpkg-query -l 					List all installed packages With version and architecture information, and 											description, in a table:
+The *****apt-cache***** command line tool is used for searching apt software package cache. In simple words, this tool is used to search software packages, collects information of packages and also used to search for what available packages are ready for installation on Debian or Ubuntu based systems.
+To list all the available packages								apt-cache pkgnames
+Package Name and Description of Software    					apt-cache search vsftpd    ex: vsftpd
+To find and list down all the packages starting with ‘vsftpd‘   apt-cache pkgnames vsftpd
+Check Package information 										apt-cache show netcat
+Check Dependencies for Specific Packages 						apt-cache showpkg vsftpd
+Update System Packages 	---- The ‘update‘ command is used to resynchronize the package index files from the their sources specified in /etc/apt/sources.list file. The update command fetched the packages from their locations and update the packages to newer version. 							sudo apt-get update
+ ‘upgrade‘ command is used to upgrade all the currently installed software packages on the system. 																			       sudo apt-get upgrade
+ However, if you want to upgrade, unconcerned of whether software packages will be added or removed to fulfill dependencies, use the ‘dist-upgrade‘ sub command. 			  sudo apt-get dist-upgrade
+ Install Several Packages using Wildcard 						sudo apt-get install '*name*'
+ install Packages without Upgrading 							sudo apt-get install packageName --no-upgrade
+ ‘–only-upgrade‘ command do not install new packages but it only upgrade the already installed packages and disables new installation of packages.									sudo apt-get install packageName --only-upgrade
+Install Specific Package Version? 								sudo apt-get install vsftpd=2.3.5-3ubuntu1
+Remove Packages Without Configuration 							sudo apt-get remove vsftpd
+Completely Remove Packages including their configuration files  sudo apt-get purge vsftpd
+Alternatively, you can combine both the commands together 		sudo apt-get remove --purge vsftpd
+‘clean‘ command is used to free up the disk space by cleaning retrieved (downloaded) .deb files (packages) from the local repository. 							 					sudo apt-get clean
+Download Only Source Code of Package 							sudo apt-get --download-only source vsftpd
+Download and Unpack a Package 									sudo apt-get source vsftpd
+Download, Unpack and Compile a Package 							sudo apt-get --compile source goaccess
+Download a Package Without Installing 							sudo apt-get download nethogs
+Check Change Log of Package  									sudo apt-get changelog vsftpd
+Check Broken Dependencies 										sudo apt-get check
+Search and Build Dependencies 									sudo apt-get build-dep netcat
+‘autoclean‘ command deletes all .deb files from /var/cache/apt/archives to free-up significant volume of disk space.
+																sudo apt-get autoclean
+Auto remove Installed Packages  								sudo apt-get autoremove vsftpd
+
+
+
+
+
+
+
+
+
+
