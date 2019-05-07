@@ -13,25 +13,17 @@ variables:
   KEYCDN_ZONE_ID: "129063"
   KEYCDN_ZONE_NAME: hugotest
 blocks:
-    - name: "pre-Build"
-      task:
-        jobs:
-          - "apk update"
-          - "apk add curl"
-    - name: "Build"
-      task:
-        jobs:
-          - "apk add git"
-          - "git submodule update --init"
-          - "curl -sSL https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_Linux-64bit.tar.gz -o /tmp/hugo.tar.gz"
-          - "echo \"${HUGO_CHECKSUM}  /tmp/hugo.tar.gz\" | sha256sum -c"
-          - "tar xf /tmp/hugo.tar.gz hugo -C /tmp/ && cp /tmp/hugo /usr/bin"
-          - "hugo --baseURL ${BASEURL}"
-    - name: "push_keycdn"
-      task:
-        jobs:
-          - "apk add openssh rsync"
-          - "mkdir -p ~/.ssh"
-          - "echo 'rsync.keycdn.com,185.172.149.122 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBFM7Jqs3BqC+MSEoVsZ+YMKTjVIMTSKlZX2+0t88o4LZvd+BWt71SkXv4mQ↪ r7xKD59m7jeJcWiO43u7YQzi+Tgg=' >> ~/.ssh/known_hosts"
-          - "echo \"${SSH_DEPLOY_KEY}\" > ~/.ssh/id_rsa && chmod 600 ~/.ssh/id_rsa"
-          - "rsync -rtvz --chmod=D2755,F644 --delete public/ ${KEYCDN_USER}@rsync.keycdn.com:${KEYCDN_ZONE_NAME}/"          
+  - name: "pre-Build"
+    task:
+      jobs:
+        - "apk update"
+        - "apk add curl"
+  - name: "Build"
+    task:
+      jobs:
+        - "apk add git"
+        - "git submodule update --init"
+        - "curl -sSL https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_${HUGO_VERSION}_Linux-64bit.tar.gz -o /tmp/hugo.tar.gz"
+        - "echo \"${HUGO_CHECKSUM}  /tmp/hugo.tar.gz\" | sha256sum -c"
+        - "tar xf /tmp/hugo.tar.gz hugo -C /tmp/ && cp /tmp/hugo /usr/bin"
+        - "hugo --baseURL ${BASEURL}"
