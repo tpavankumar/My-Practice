@@ -4,14 +4,6 @@ agent:
   machine:
     type: e1-standard-2
     os_image: ubuntu1804
-variables: 
-  BASEURL: "https://hugotest-ff31.kxcdn.com"
-  HUGO_CHECKSUM: 0e4424c90ce5c7a0c0f7ad24a558dd0c2f1500256023f6e3c0004f57a20ee119
-  HUGO_VERSION: "0.53"
-  KEYCDN_API_KEY: sk_prod_MmQ1YWE5MWNiMzIxNWIyYjU4
-  KEYCDN_USER: shawacademy
-  KEYCDN_ZONE_ID: "129063"
-  KEYCDN_ZONE_NAME: hugotest
 blocks:
   - name: "pre-Build"
     task:
